@@ -1,0 +1,26 @@
+{  
+   "auth":{  
+      "scope":{  
+         "project":{  
+            "domain":{  
+               "name":"Default"
+            },
+            "name":"{{ PROJECT_NAME }}"
+         }
+      },
+      "identity":{  
+         "password":{  
+            "user":{  
+               "domain":{  
+                  "name":"Default"
+               },
+               "password":"{{ PVC_PWD }}",
+               "name":"{{ PVC_USER }}"
+            }
+         },
+         "methods":[  
+            "password"
+         ]
+      }
+   }
+}

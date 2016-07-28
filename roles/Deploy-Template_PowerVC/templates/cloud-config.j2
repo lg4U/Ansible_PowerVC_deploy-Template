@@ -1,0 +1,7 @@
+#cloud-config
+manage_etc_hosts: true
+ssh_authorized_keys:
+ - {{ rsa_key_public }}
+runcmd:
+ - en=$( lsdev -Cc if -S Available -F name |  head -1 ); lsattr -El $en -a netaddr -F value | xargs -I {} hostent -a {} -h $(hostname -s)
+final_message: "Deploiement is Done"

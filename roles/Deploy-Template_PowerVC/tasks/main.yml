@@ -1,0 +1,110 @@
+---
+# tasks file for DeployVM_PowerVC
+- fail: msg="Variable PROJECT_NAME must be defined"
+  when: PROJECT_NAME is undefined
+
+- fail: msg="Variable TEMPLATE_NAME must be defined"
+  when: TEMPLATE_NAME is undefined
+
+- name: Get PowerVC Token
+  uri:
+   url: '{{ URL_PVC }}/powervc/openstack/identity/v3/auth/tokens'
+   method: POST
+   validate_certs: no
+   HEADER_Vary: "X-Auth-Token, X-Subject-Token"
+   HEADER_Content-Type: "application/json"
+   HEADER_Accept: "application/json"
+   body_format: json
+   body: "{{ lookup('template', 'body_auth.json.j2') }}"
+   return_content: yes
+   status_code: 201
+  register: token
+
+- name: Set Variable TOKEN
+  set_fact: TOKEN="{{ token['x_subject_token'] }}"
+
+- name: Get Templates list
+  uri:
+   url: '{{ URL_CLERK }}/image-templates'
+   method: GET
+   validate_certs: no
+   HEADER_Content-Type: "application/json"
+   HEADER_Accept: "application/json"
+   HEADER_X-Auth-Token: "{{ TOKEN }}"
+   return_content: yes
+   status_code: 200
+  register: templates
+
+- set_fact: templates_tmp='{{ templates.json | regex_replace('image-templates', 'image_templates') }}'
+
+- set_fact:
+   TEMPLATE:  "{{ item.create_server_spec }}"
+   tenant_id:  "{{ item.project_id }}"
+  with_items:
+   - "{{ templates_tmp.image_templates }}"
+  when: item.name == "{{ TEMPLATE_NAME }}"
+
+- name: Set Deploy Template
+  copy:
+   content: "{{ TEMPLATE |combine({ 'server':{'user_data': '{{ user_data_b64encoded }}'}}, recursive=True)|combine({ 'server':{'name': 'VM_NAME'}}, recursive=True)  }}"
+   dest: "./body_deploy_vm.json.j2"
+
+- name: Get Network Name
+  uri:
+   url: "{{ URL_PVC }}/powervc/openstack/network/v2.0/networks/{{ TEMPLATE['server']['networks'][0]['uuid'] }}"
+   method: GET
+   validate_certs: no
+   HEADER_Content-Type: "application/json"
+   HEADER_Accept: "application/json"
+   HEADER_X-Auth-Token: "{{ TOKEN }}"
+   return_content: yes
+   status_code: 200
+  register: network
+
+- name: Set Rsa Public Key for Cloud-config
+  set_fact: rsa_key_public="{{ lookup('file', SSH_PUBLIC_KEY) }}"
+
+- name: Encode Cloud-config user_data with Base64
+  set_fact: user_data_b64encoded="{{ lookup('template', 'cloud-config.j2') | b64encode}}"
+
+- name: Send Request for Server Deployment
+  uri:
+   url: '{{ URL_PVC }}/powervc/openstack/compute/v2/{{ tenant_id }}/servers'
+   method: POST
+   validate_certs: no
+   HEADER_Content-Type: "application/json"
+   HEADER_Accept: "application/json"
+   HEADER_X-Auth-Token: "{{ TOKEN }}"
+   return_content: yes
+   status_code: 202
+   body_format: json
+   body: "{{ lookup('template', './body_deploy_vm.json.j2') }}"
+  register: deploy
+
+- name: "A little Pause while Deployment ({{ PAUSE_IN_SEC }} seconds)"
+  pause: seconds={{ PAUSE_IN_SEC }}
+
+- name: Get Status Info from the Request (polling {{ nb_retry }} times every {{ nb_delay }} seconds)
+  uri:
+   url: "{{ deploy.location }}"
+   method: GET
+   validate_certs: no
+   HEADER_Content-Type: "application/json"
+   HEADER_Accept: "application/json"
+   HEADER_X-Auth-Token: "{{ TOKEN }}"
+   return_content: yes
+  register: result
+  until: "'{{ result.json.server.status }}' == 'ACTIVE'"
+  retries: "{{ nb_retry }}"
+  delay: "{{ nb_delay }}"
+
+- name: Get IP Address Deployed
+  set_fact: vm_ip="{{ item.value[0].addr }}"
+  with_dict: "{{ result.json.server.addresses }}"
+  when: item.key == "{{ network.json.network['name'] }}"
+
+- fail: msg="No found IP Address"
+  when: vm_ip is undefined
+
+- name: "Waiting for Active VM with IP {{ vm_ip }} (Timeout={{ nb_timeout }})"
+  local_action: wait_for host="{{ vm_ip }}" port=22 state=started delay={{ nb_delay }} timeout={{ nb_timeout }}

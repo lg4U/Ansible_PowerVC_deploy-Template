@@ -1,0 +1,7 @@
+- name: "Deploy VM AIX Template with PowerVC"
+  hosts: localhost
+  gather_facts: False
+  vars_files:
+   - vars/default.yml
+  roles:
+   - { role: Deploy-Template_PowerVC }

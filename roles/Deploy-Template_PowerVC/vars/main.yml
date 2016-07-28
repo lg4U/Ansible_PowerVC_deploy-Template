@@ -1,0 +1,12 @@
+---
+# vars file for DeployVM_PowerVC
+IP_PVC: <IP>
+URL_PVC: https://{{ IP_PVC }}
+URL_CLERK: https://{{ IP_PVC }}:8998/v1.0
+PVC_USER: <USER>
+PVC_PWD: <PASSWORD>
+PAUSE_IN_SEC: 15
+nb_retry: 12
+nb_delay: 10
+nb_timeout: 300
+SSH_PUBLIC_KEY: <PUBLIC_KEY_ABSOLUTE_PATH>
