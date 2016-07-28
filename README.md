@@ -22,8 +22,8 @@ This Role includes any variables that are in vars/main.yml:
 - __nb_timeout__	   :	 Timeout waiting Active VM (secondes)
 - __SSH_PUBLIC_KEY__ :   absolute_path for public ssh keyfile
 
-Example Playbook
-----------------
+Usage
+------
 
 How to use this role. You must have a PowerVC Template available. For instance, I have a template based on an AIX image AIX 7.1 TL3 SP5. Its name is MOD_AIX7100-03_05.
 You have to specify the VM_NAME to deploy and the PROJECT_NAME to use this role.
