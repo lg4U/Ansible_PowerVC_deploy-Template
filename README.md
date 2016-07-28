@@ -31,7 +31,7 @@ You have to specify the VM_NAME to deploy and the PROJECT_NAME to use this role.
 By default, PowerVC use 'ibm-default' project. On my PowerVC, I created a project named 'devops-project':
 
 ```
-# ansible-playbook DeployVM_PowerVC.yml -e TEMPLATE_NAME=MOD_AIX7100-03_05 -e PROJECT_NAME=devops-project -e VM_NAME=vm_test
+# ansible-playbook Deploy-Template_PowerVC.yml -e TEMPLATE_NAME=MOD_AIX7100-03_05 -e PROJECT_NAME=devops-project -e VM_NAME=vm_test
 ```
 
 
